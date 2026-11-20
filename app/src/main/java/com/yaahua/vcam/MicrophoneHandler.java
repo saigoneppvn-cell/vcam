@@ -27,12 +27,64 @@ public class MicrophoneHandler {
     public static void init(final XC_LoadPackage.LoadPackageParam lpparam) {
         // Hook AudioRecord.read — 拦截音频读取，实现静音/替换
         hookAudioRecordRead(lpparam);
+        hookAudioRecordReadAdvanced();
 
         // Hook MediaRecorder.setAudioSource — 检测录音行为
         hookMediaRecorderSetAudioSource(lpparam);
 
         // Hook MediaRecorder.setCamera — 检测录像行为
         hookMediaRecorderSetCamera(lpparam);
+    }
+
+    // Cover newer AudioRecord APIs so apps cannot bypass the virtual microphone.
+    private static void hookAudioRecordReadAdvanced() {
+        try {
+            XposedHelpers.findAndHookMethod(AudioRecord.class, "read",
+                    byte[].class, int.class, int.class, int.class, new XC_MethodHook() {
+                @Override
+                protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
+                    byte[] buffer = (byte[]) param.args[0];
+                    int offset = (int) param.args[1];
+                    int size = Math.max(0, Math.min((int) param.args[2], buffer.length - offset));
+                    Arrays.fill(buffer, offset, offset + size, (byte) 0);
+                    loadAudioDataIfNeeded();
+                    if (cachedAudioData != null && cachedAudioData.length > 0) {
+                        if (cachedAudioPos >= cachedAudioData.length) cachedAudioPos = 0;
+                        int count = Math.min(size, cachedAudioData.length - cachedAudioPos);
+                        System.arraycopy(cachedAudioData, cachedAudioPos, buffer, offset, count);
+                        cachedAudioPos += count;
+                        param.setResult(count);
+                    } else {
+                        param.setResult(size);
+                    }
+                }
+            });
+        } catch (Throwable e) {
+            XposedBridge.log("【VCAM】AudioRecord.read(byte[],...,mode) Hook失败: " + e);
+        }
+
+        try {
+            XposedHelpers.findAndHookMethod(AudioRecord.class, "read",
+                    java.nio.ByteBuffer.class, int.class, new XC_MethodHook() {
+                @Override
+                protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
+                    java.nio.ByteBuffer target = (java.nio.ByteBuffer) param.args[0];
+                    int size = Math.max(0, Math.min((int) param.args[1], target.remaining()));
+                    byte[] output = new byte[size];
+                    loadAudioDataIfNeeded();
+                    if (cachedAudioData != null && cachedAudioData.length > 0) {
+                        if (cachedAudioPos >= cachedAudioData.length) cachedAudioPos = 0;
+                        int count = Math.min(size, cachedAudioData.length - cachedAudioPos);
+                        System.arraycopy(cachedAudioData, cachedAudioPos, output, 0, count);
+                        cachedAudioPos += count;
+                    }
+                    target.put(output);
+                    param.setResult(size);
+                }
+            });
+        } catch (Throwable e) {
+            XposedBridge.log("【VCAM】AudioRecord.read(ByteBuffer) Hook失败: " + e);
+        }
     }
 
     // ======================== AudioRecord.read ========================
