@@ -64,6 +64,8 @@ public class MicrophoneHandler {
                             System.arraycopy(cachedAudioData, cachedAudioPos, buffer, offset, copyLen);
                             cachedAudioPos += copyLen;
                             param.setResult(copyLen);
+                        } else {
+                            param.setResult(size);
                         }
                     }
                 }
@@ -91,6 +93,8 @@ public class MicrophoneHandler {
                             System.arraycopy(cachedAudioData, cachedAudioPos, buffer, offset, copyLen);
                             cachedAudioPos += copyLen;
                             param.setResult(copyLen);
+                        } else {
+                            param.setResult(buffer.length - offset);
                         }
                     }
                 }
@@ -115,7 +119,7 @@ public class MicrophoneHandler {
                         loadAudioDataIfNeeded();
                         if (cachedAudioData != null) {
                             int remaining = (cachedAudioData.length - cachedAudioPos) / 2;
-                            if (remaining <= 0) cachedAudioPos = 0;
+                            if (remaining <= 0) { cachedAudioPos = 0; remaining = cachedAudioData.length / 2; }
                             int copyLen = Math.min(size, remaining);
                             for (int i = 0; i < copyLen; i++) {
                                 int idx = cachedAudioPos + i * 2;
@@ -125,6 +129,8 @@ public class MicrophoneHandler {
                             }
                             cachedAudioPos += copyLen * 2;
                             param.setResult(copyLen);
+                        } else {
+                            param.setResult(size);
                         }
                     }
                 }
@@ -266,19 +272,9 @@ public class MicrophoneHandler {
                     }
                 }
             } catch (Exception e) {
-                XposedBridge.log("【VCAM】音频解码失败，尝试直接提取原始数据: " + e);
-                // 回退：直接读取原始压缩数据
-                extractor.seekTo(0, 0);
-                while (true) {
-                    buf.clear();
-                    int n = extractor.readSampleData(buf, 0);
-                    if (n < 0) break;
-                    byte[] chunk = new byte[n];
-                    buf.position(0);
-                    buf.get(chunk);
-                    bos.write(chunk);
-                    extractor.advance();
-                }
+                // Never inject compressed packets as PCM; keep the virtual mic silent on decode failure.
+                XposedBridge.log("【VCAM】视频音频解码失败，输入保持静音: " + e);
+                bos.reset();
             }
 
             if (decoder != null) {
