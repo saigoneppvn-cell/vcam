@@ -29,7 +29,9 @@ data class MainUiState(
     val streamAutoReconnect: Boolean = true,
     val streamLocalFallback: Boolean = true,
     val streamTransportHint: String = "auto",
-    val streamTimeoutMs: Long = 8000L
+    val streamTimeoutMs: Long = 8000L,
+    val videoRotationOffset: Int = 0,
+    val videoZoomPercent: Int = 100
 )
 
 class MainViewModel(application: Application) : AndroidViewModel(application) {
@@ -63,7 +65,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     streamAutoReconnect = configManager.getBoolean(ConfigManager.KEY_STREAM_AUTO_RECONNECT, true),
                     streamLocalFallback = configManager.getBoolean(ConfigManager.KEY_STREAM_LOCAL_FALLBACK, true),
                     streamTransportHint = configManager.getString(ConfigManager.KEY_STREAM_TRANSPORT_HINT, "auto"),
-                    streamTimeoutMs = configManager.getLong(ConfigManager.KEY_STREAM_TIMEOUT_MS, 8000L)
+                    streamTimeoutMs = configManager.getLong(ConfigManager.KEY_STREAM_TIMEOUT_MS, 8000L),
+                    videoRotationOffset = configManager.getInt(ConfigManager.KEY_VIDEO_ROTATION_OFFSET, 0),
+                    videoZoomPercent = configManager.getInt(ConfigManager.KEY_VIDEO_ZOOM_PERCENT, 100).coerceIn(100, 400)
                 )
             }
         }
@@ -180,7 +184,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    fun setStreamTimeoutMs(timeout: Long) {
+    fun setVideoRotationOffset(degrees: Int) {\n        val normalized = ((degrees % 360) + 360) % 360\n        viewModelScope.launch(Dispatchers.IO) {\n            configManager.setInt(ConfigManager.KEY_VIDEO_ROTATION_OFFSET, normalized)\n            _uiState.update { it.copy(videoRotationOffset = normalized) }\n        }\n    }\n\n    fun setVideoZoomPercent(percent: Int) {\n        val safe = percent.coerceIn(100, 400)\n        viewModelScope.launch(Dispatchers.IO) {\n            configManager.setInt(ConfigManager.KEY_VIDEO_ZOOM_PERCENT, safe)\n            _uiState.update { it.copy(videoZoomPercent = safe) }\n        }\n    }\n\n    fun setStreamTimeoutMs(timeout: Long) {
         viewModelScope.launch(Dispatchers.IO) {
             configManager.setLong(ConfigManager.KEY_STREAM_TIMEOUT_MS, timeout)
             _uiState.update { it.copy(streamTimeoutMs = timeout) }
