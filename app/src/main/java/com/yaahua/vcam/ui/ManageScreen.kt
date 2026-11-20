@@ -38,7 +38,15 @@ fun ManageScreen(viewModel: MediaViewModel) {
     var showFabMenu by remember { mutableStateOf(false) }
     val uiState by viewModel.uiState.collectAsState()
 
-    val videoImportLauncher = rememberLauncherForActivityResult(
+    // Android Photo Picker: select videos directly from the phone gallery.
+    val videoGalleryLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.PickMultipleVisualMedia(20)
+    ) { uris ->
+        if (uris.isNotEmpty()) viewModel.importFiles(uris, false)
+    }
+
+    // Keep document browsing available for files outside the media library.
+    val videoFileLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenMultipleDocuments()
     ) { uris ->
         if (uris.isNotEmpty()) viewModel.importFiles(uris, false)
@@ -59,10 +67,22 @@ fun ManageScreen(viewModel: MediaViewModel) {
                 ) {
                     if (selectedTab == 0) {
                         DropdownMenuItem(
-                            text = { Text(text = stringResource(R.string.import_to_camera_dir)) },
+                            text = { Text("Chọn video từ thư viện") },
                             onClick = {
                                 showFabMenu = false
-                                videoImportLauncher.launch(arrayOf("video/*"))
+                                videoGalleryLauncher.launch(
+                                    androidx.activity.result.PickVisualMediaRequest(
+                                        ActivityResultContracts.PickVisualMedia.VideoOnly
+                                    )
+                                )
+                            },
+                            leadingIcon = { Icon(Icons.Default.VideoLibrary, null) }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Duyệt video trong thư mục") },
+                            onClick = {
+                                showFabMenu = false
+                                videoFileLauncher.launch(arrayOf("video/*"))
                             },
                             leadingIcon = { Icon(Icons.Default.Add, null) }
                         )
