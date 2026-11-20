@@ -90,76 +90,11 @@ fun SettingsScreen(viewModel: MainViewModel) {
             SettingsDivider()
 
             SettingsSwitchRow(
-                icon = Icons.Default.Mic,
-                title = stringResource(R.string.settings_mic_hook),
-                subtitle = stringResource(R.string.settings_mic_hook_desc),
-                checked = uiState.enableMicHook,
-                onCheckedChange = { viewModel.setEnableMicHook(it) }
-            )
-
-            AnimatedVisibility(
-                visible = uiState.enableMicHook,
-                enter = expandVertically() + fadeIn(),
-                exit = shrinkVertically() + fadeOut()
-            ) {
-                Column(modifier = Modifier.padding(start = 40.dp, top = 4.dp, bottom = 4.dp)) {
-                    MicModeOption(
-                        title = stringResource(R.string.mic_mode_mute),
-                        description = stringResource(R.string.mic_mode_mute_desc),
-                        selected = uiState.micHookMode == "mute",
-                        onClick = { viewModel.setMicHookMode("mute") }
-                    )
-                    MicModeOption(
-                        title = stringResource(R.string.mic_mode_replace),
-                        description = stringResource(R.string.mic_mode_replace_desc),
-                        selected = uiState.micHookMode == "replace",
-                        onClick = { viewModel.setMicHookMode("replace") }
-                    )
-                    MicModeOption(
-                        title = stringResource(R.string.mic_mode_video_sync),
-                        description = stringResource(R.string.mic_mode_video_sync_desc),
-                        selected = uiState.micHookMode == "video_sync",
-                        onClick = { viewModel.setMicHookMode("video_sync") }
-                    )
-                }
-            }
-            SettingsDivider()
-
-            SettingsSwitchRow(
                 icon = Icons.Default.Shuffle,
                 title = stringResource(R.string.settings_random_play),
                 subtitle = stringResource(R.string.settings_random_play_desc),
                 checked = uiState.enableRandomPlay,
                 onCheckedChange = { viewModel.setEnableRandomPlay(it) }
-            )
-        }
-
-        SettingsSection(title = "Điều chỉnh hình ảnh video") {
-            Text("Xoay video", style = MaterialTheme.typography.bodyLarge)
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
-                listOf(0, 90, 180, 270).forEach { angle ->
-                    FilterChip(
-                        selected = uiState.videoRotationOffset == angle,
-                        onClick = { viewModel.setVideoRotationOffset(angle) },
-                        label = { Text("${angle}°") }
-                    )
-                }
-            }
-            Spacer(modifier = Modifier.height(8.dp))
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("Thu phóng / cắt khung", style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
-                Text("${uiState.videoZoomPercent}%", style = MaterialTheme.typography.labelLarge)
-            }
-            Slider(
-                value = uiState.videoZoomPercent.toFloat(),
-                onValueChange = { viewModel.setVideoZoomPercent(it.toInt()) },
-                valueRange = 100f..400f,
-                steps = 29
-            )
-            Text(
-                "100% giữ trọn khung hình; tăng thu phóng sẽ cắt viền ở giữa.",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
 
