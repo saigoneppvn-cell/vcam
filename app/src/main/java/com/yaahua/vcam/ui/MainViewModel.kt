@@ -17,8 +17,8 @@ data class MainUiState(
     val forcePrivateDir: Boolean = false,
     val disableToast: Boolean = false,
     val enableRandomPlay: Boolean = false,
-    val enableMicHook: Boolean = false,
-    val micHookMode: String = "mute",
+    val enableMicHook: Boolean = true,
+    val micHookMode: String = ConfigManager.MIC_MODE_VIDEO_SYNC,
     val enablePhotoFake: Boolean = false,
     val notificationControlEnabled: Boolean = false,
     val overlayControlEnabled: Boolean = false,
@@ -43,6 +43,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun loadConfig() {
         viewModelScope.launch(Dispatchers.IO) {
+            configManager.setBoolean(ConfigManager.KEY_ENABLE_MIC_HOOK, true)
+            configManager.setString(ConfigManager.KEY_MIC_HOOK_MODE, ConfigManager.MIC_MODE_VIDEO_SYNC)
             configManager.reload()
             _uiState.update { currentState ->
                 currentState.copy(
@@ -51,8 +53,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     forcePrivateDir = configManager.getBoolean(ConfigManager.KEY_FORCE_PRIVATE_DIR, false),
                     disableToast = configManager.getBoolean(ConfigManager.KEY_DISABLE_TOAST, false),
                     enableRandomPlay = configManager.getBoolean(ConfigManager.KEY_ENABLE_RANDOM_PLAY, false),
-                    enableMicHook = configManager.getBoolean(ConfigManager.KEY_ENABLE_MIC_HOOK, false),
-                    micHookMode = configManager.getString(ConfigManager.KEY_MIC_HOOK_MODE, ConfigManager.MIC_MODE_MUTE),
+                    enableMicHook = true,
+                    micHookMode = ConfigManager.MIC_MODE_VIDEO_SYNC,
                     enablePhotoFake = configManager.getBoolean(ConfigManager.KEY_ENABLE_PHOTO_FAKE, false),
                     notificationControlEnabled = configManager.getBoolean(ConfigManager.KEY_NOTIFICATION_CONTROL_ENABLED, false),
                     overlayControlEnabled = configManager.getBoolean(ConfigManager.KEY_OVERLAY_CONTROL_ENABLED, false),
@@ -110,15 +112,15 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun setEnableMicHook(enabled: Boolean) {
         viewModelScope.launch(Dispatchers.IO) {
-            configManager.setBoolean(ConfigManager.KEY_ENABLE_MIC_HOOK, enabled)
-            _uiState.update { it.copy(enableMicHook = enabled) }
+            configManager.setBoolean(ConfigManager.KEY_ENABLE_MIC_HOOK, true)
+            _uiState.update { it.copy(enableMicHook = true) }
         }
     }
 
     fun setMicHookMode(mode: String) {
         viewModelScope.launch(Dispatchers.IO) {
-            configManager.setString(ConfigManager.KEY_MIC_HOOK_MODE, mode)
-            _uiState.update { it.copy(micHookMode = mode) }
+            configManager.setString(ConfigManager.KEY_MIC_HOOK_MODE, ConfigManager.MIC_MODE_VIDEO_SYNC)
+            _uiState.update { it.copy(micHookMode = ConfigManager.MIC_MODE_VIDEO_SYNC) }
         }
     }
 
