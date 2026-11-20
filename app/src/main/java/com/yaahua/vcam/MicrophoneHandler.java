@@ -263,7 +263,10 @@ public class MicrophoneHandler {
         try {
             java.io.File videoFile = HookGuards.getVideoFile();
             if (videoFile == null || !videoFile.exists()) {
-                cachedAudioData = null;
+                cachedAudioData = new byte[0];
+                rawVideoPcm = new byte[0];
+                cachedAudioPath = null;
+                cachedAudioPos = 0;
                 return;
             }
             String videoPath = videoFile.getAbsolutePath();
@@ -294,8 +297,10 @@ public class MicrophoneHandler {
             }
             if (audioTrack < 0) {
                 extractor.release();
-                cachedAudioData = null;
-                rawVideoPcm = null;
+                cachedAudioData = new byte[0];
+                rawVideoPcm = new byte[0];
+                cachedTargetSampleRate = targetSampleRate;
+                cachedTargetChannels = targetChannels;
                 XposedBridge.log("【VCAM】视频无音频轨道，video_sync 回退到静音");
                 return;
             }
