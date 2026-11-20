@@ -310,10 +310,6 @@ public class Camera2SessionHook {
                 SharedState.c2_player = new MediaPlayer();
             }
             SharedState.c2_player.setSurface(SharedState.c2_preview_Surfcae);
-            SharedState.c2_player.setVideoScalingMode(
-                    HookGuards.getConfig().getInt(ConfigManager.KEY_VIDEO_ZOOM_PERCENT, 100) > 100
-                            ? MediaPlayer.VIDEO_SCALING_MODE_SCALE_TO_FIT_WITH_CROPPING
-                            : MediaPlayer.VIDEO_SCALING_MODE_SCALE_TO_FIT);
             if (!HookGuards.shouldPlaySound()) {
                 SharedState.c2_player.setVolume(0, 0);
             }
@@ -340,10 +336,6 @@ public class Camera2SessionHook {
                 SharedState.c2_player_1 = new MediaPlayer();
             }
             SharedState.c2_player_1.setSurface(SharedState.c2_preview_Surfcae_1);
-            SharedState.c2_player_1.setVideoScalingMode(
-                    HookGuards.getConfig().getInt(ConfigManager.KEY_VIDEO_ZOOM_PERCENT, 100) > 100
-                            ? MediaPlayer.VIDEO_SCALING_MODE_SCALE_TO_FIT_WITH_CROPPING
-                            : MediaPlayer.VIDEO_SCALING_MODE_SCALE_TO_FIT);
             if (!HookGuards.shouldPlaySound()) {
                 SharedState.c2_player_1.setVolume(0, 0);
             }
@@ -477,18 +469,10 @@ public class Camera2SessionHook {
             if (SharedState.c2_player == null) {
                 SharedState.c2_player = new MediaPlayer();
                 SharedState.c2_player.setSurface(SharedState.c2_preview_Surfcae);
-            SharedState.c2_player.setVideoScalingMode(
-                    HookGuards.getConfig().getInt(ConfigManager.KEY_VIDEO_ZOOM_PERCENT, 100) > 100
-                            ? MediaPlayer.VIDEO_SCALING_MODE_SCALE_TO_FIT_WITH_CROPPING
-                            : MediaPlayer.VIDEO_SCALING_MODE_SCALE_TO_FIT);
             }
             try {
                 SharedState.c2_player.reset();
                 SharedState.c2_player.setSurface(SharedState.c2_preview_Surfcae);
-            SharedState.c2_player.setVideoScalingMode(
-                    HookGuards.getConfig().getInt(ConfigManager.KEY_VIDEO_ZOOM_PERCENT, 100) > 100
-                            ? MediaPlayer.VIDEO_SCALING_MODE_SCALE_TO_FIT_WITH_CROPPING
-                            : MediaPlayer.VIDEO_SCALING_MODE_SCALE_TO_FIT);
                 SharedState.c2_player.setVolume(playSound ? 1f : 0f, playSound ? 1f : 0f);
                 SharedState.c2_player.setLooping(true);
                 SharedState.c2_player.setOnPreparedListener(mp -> SharedState.c2_player.start());
@@ -504,18 +488,10 @@ public class Camera2SessionHook {
             if (SharedState.c2_player_1 == null) {
                 SharedState.c2_player_1 = new MediaPlayer();
                 SharedState.c2_player_1.setSurface(SharedState.c2_preview_Surfcae_1);
-            SharedState.c2_player_1.setVideoScalingMode(
-                    HookGuards.getConfig().getInt(ConfigManager.KEY_VIDEO_ZOOM_PERCENT, 100) > 100
-                            ? MediaPlayer.VIDEO_SCALING_MODE_SCALE_TO_FIT_WITH_CROPPING
-                            : MediaPlayer.VIDEO_SCALING_MODE_SCALE_TO_FIT);
             }
             try {
                 SharedState.c2_player_1.reset();
                 SharedState.c2_player_1.setSurface(SharedState.c2_preview_Surfcae_1);
-            SharedState.c2_player_1.setVideoScalingMode(
-                    HookGuards.getConfig().getInt(ConfigManager.KEY_VIDEO_ZOOM_PERCENT, 100) > 100
-                            ? MediaPlayer.VIDEO_SCALING_MODE_SCALE_TO_FIT_WITH_CROPPING
-                            : MediaPlayer.VIDEO_SCALING_MODE_SCALE_TO_FIT);
                 SharedState.c2_player_1.setVolume(playSound ? 1f : 0f, playSound ? 1f : 0f);
                 SharedState.c2_player_1.setLooping(true);
                 SharedState.c2_player_1.setOnPreparedListener(mp -> SharedState.c2_player_1.start());
