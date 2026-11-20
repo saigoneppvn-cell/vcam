@@ -434,10 +434,7 @@ public class MicrophoneHandler {
                     int.class, new XC_MethodHook() {
                 @Override
                 protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
-                    // Prevent MediaRecorder from configuring a physical microphone.
-                    // PCM injection is handled through the AudioRecord virtual input path.
-                    XposedBridge.log("【VCAM】已阻止 MediaRecorder 使用真实麦克风，原音源=" + param.args[0]);
-                    param.setResult(null);
+                    XposedBridge.log("【VCAM】MediaRecorder.setAudioSource: " + param.args[0]);
                 }
             });
         } catch (Throwable e) {
