@@ -374,8 +374,16 @@ public class Camera1Handler {
                     while (SharedState.data_buffer == null) {
                         // wait
                     }
-                    System.arraycopy(SharedState.data_buffer, 0, paramd.args[0], 0,
-                            Math.min(SharedState.data_buffer.length, ((byte[]) paramd.args[0]).length));
+                    byte[] firstTarget = (byte[]) paramd.args[0];
+                    byte[] firstFrame = Nv21FrameTransformer.transform(
+                            SharedState.data_buffer,
+                            SharedState.decodedVideoWidth, SharedState.decodedVideoHeight,
+                            SharedState.mwidth, SharedState.mhight,
+                            HookGuards.getConfig().getInt(ConfigManager.KEY_VIDEO_ROTATION_OFFSET, 0),
+                            1.0f);
+                    if (firstFrame != null) {
+                        System.arraycopy(firstFrame, 0, firstTarget, 0, Math.min(firstFrame.length, firstTarget.length));
+                    }
                 }
             }
         });
