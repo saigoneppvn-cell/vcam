@@ -184,7 +184,23 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    fun setVideoRotationOffset(degrees: Int) {\n        val normalized = ((degrees % 360) + 360) % 360\n        viewModelScope.launch(Dispatchers.IO) {\n            configManager.setInt(ConfigManager.KEY_VIDEO_ROTATION_OFFSET, normalized)\n            _uiState.update { it.copy(videoRotationOffset = normalized) }\n        }\n    }\n\n    fun setVideoZoomPercent(percent: Int) {\n        val safe = percent.coerceIn(100, 400)\n        viewModelScope.launch(Dispatchers.IO) {\n            configManager.setInt(ConfigManager.KEY_VIDEO_ZOOM_PERCENT, safe)\n            _uiState.update { it.copy(videoZoomPercent = safe) }\n        }\n    }\n\n    fun setStreamTimeoutMs(timeout: Long) {
+    fun setVideoRotationOffset(degrees: Int) {
+        val normalized = ((degrees % 360) + 360) % 360
+        viewModelScope.launch(Dispatchers.IO) {
+            configManager.setInt(ConfigManager.KEY_VIDEO_ROTATION_OFFSET, normalized)
+            _uiState.update { it.copy(videoRotationOffset = normalized) }
+        }
+    }
+
+    fun setVideoZoomPercent(percent: Int) {
+        val safe = percent.coerceIn(100, 400)
+        viewModelScope.launch(Dispatchers.IO) {
+            configManager.setInt(ConfigManager.KEY_VIDEO_ZOOM_PERCENT, safe)
+            _uiState.update { it.copy(videoZoomPercent = safe) }
+        }
+    }
+
+    fun setStreamTimeoutMs(timeout: Long) {
         viewModelScope.launch(Dispatchers.IO) {
             configManager.setLong(ConfigManager.KEY_STREAM_TIMEOUT_MS, timeout)
             _uiState.update { it.copy(streamTimeoutMs = timeout) }
