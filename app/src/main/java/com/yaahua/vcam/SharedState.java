@@ -21,6 +21,9 @@ public class SharedState {
     public static Camera camera_onPreviewFrame;
     public static Camera start_preview_camera;
     public static volatile byte[] data_buffer = {0};
+    // Dimensions of the most recently decoded NV21 source frame.
+    public static volatile int decodedVideoWidth;
+    public static volatile int decodedVideoHeight;
     public static byte[] input;
     public static int mhight;
     public static int mwidth;
