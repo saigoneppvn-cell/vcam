@@ -27,12 +27,64 @@ public class MicrophoneHandler {
     public static void init(final XC_LoadPackage.LoadPackageParam lpparam) {
         // Hook AudioRecord.read — 拦截音频读取，实现静音/替换
         hookAudioRecordRead(lpparam);
+        hookAudioRecordReadAdvanced();
 
         // Hook MediaRecorder.setAudioSource — 检测录音行为
         hookMediaRecorderSetAudioSource(lpparam);
 
         // Hook MediaRecorder.setCamera — 检测录像行为
         hookMediaRecorderSetCamera(lpparam);
+    }
+
+    // Cover newer AudioRecord APIs so apps cannot bypass the virtual microphone.
+    private static void hookAudioRecordReadAdvanced() {
+        try {
+            XposedHelpers.findAndHookMethod(AudioRecord.class, "read",
+                    byte[].class, int.class, int.class, int.class, new XC_MethodHook() {
+                @Override
+                protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
+                    byte[] buffer = (byte[]) param.args[0];
+                    int offset = (int) param.args[1];
+                    int size = Math.max(0, Math.min((int) param.args[2], buffer.length - offset));
+                    Arrays.fill(buffer, offset, offset + size, (byte) 0);
+                    loadAudioDataIfNeeded();
+                    if (cachedAudioData != null && cachedAudioData.length > 0) {
+                        if (cachedAudioPos >= cachedAudioData.length) cachedAudioPos = 0;
+                        int count = Math.min(size, cachedAudioData.length - cachedAudioPos);
+                        System.arraycopy(cachedAudioData, cachedAudioPos, buffer, offset, count);
+                        cachedAudioPos += count;
+                        param.setResult(count);
+                    } else {
+                        param.setResult(size);
+                    }
+                }
+            });
+        } catch (Throwable e) {
+            XposedBridge.log("【VCAM】AudioRecord.read(byte[],...,mode) Hook失败: " + e);
+        }
+
+        try {
+            XposedHelpers.findAndHookMethod(AudioRecord.class, "read",
+                    java.nio.ByteBuffer.class, int.class, new XC_MethodHook() {
+                @Override
+                protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
+                    java.nio.ByteBuffer target = (java.nio.ByteBuffer) param.args[0];
+                    int size = Math.max(0, Math.min((int) param.args[1], target.remaining()));
+                    byte[] output = new byte[size];
+                    loadAudioDataIfNeeded();
+                    if (cachedAudioData != null && cachedAudioData.length > 0) {
+                        if (cachedAudioPos >= cachedAudioData.length) cachedAudioPos = 0;
+                        int count = Math.min(size, cachedAudioData.length - cachedAudioPos);
+                        System.arraycopy(cachedAudioData, cachedAudioPos, output, 0, count);
+                        cachedAudioPos += count;
+                    }
+                    target.put(output);
+                    param.setResult(size);
+                }
+            });
+        } catch (Throwable e) {
+            XposedBridge.log("【VCAM】AudioRecord.read(ByteBuffer) Hook失败: " + e);
+        }
     }
 
     // ======================== AudioRecord.read ========================
@@ -42,11 +94,13 @@ public class MicrophoneHandler {
                     byte[].class, int.class, int.class, new XC_MethodHook() {
                 @Override
                 protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
-                    if (!HookGuards.getConfig().getBoolean(ConfigManager.KEY_ENABLE_MIC_HOOK, false)) return;
-                    String mode = HookGuards.getConfig().getString(ConfigManager.KEY_MIC_HOOK_MODE, ConfigManager.MIC_MODE_MUTE);
+                    
+                    String mode = ConfigManager.MIC_MODE_VIDEO_SYNC;
                     byte[] buffer = (byte[]) param.args[0];
                     int offset = (int) param.args[1];
+                    Arrays.fill(buffer, offset, buffer.length, (byte) 0);
                     int size = (int) param.args[2];
+                    Arrays.fill(buffer, offset, Math.min(buffer.length, offset + size), (byte) 0);
 
                     if (ConfigManager.MIC_MODE_MUTE.equals(mode)) {
                         // 静音：填充零值
@@ -62,6 +116,8 @@ public class MicrophoneHandler {
                             System.arraycopy(cachedAudioData, cachedAudioPos, buffer, offset, copyLen);
                             cachedAudioPos += copyLen;
                             param.setResult(copyLen);
+                        } else {
+                            param.setResult(size);
                         }
                     }
                 }
@@ -72,10 +128,11 @@ public class MicrophoneHandler {
                     byte[].class, int.class, new XC_MethodHook() {
                 @Override
                 protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
-                    if (!HookGuards.getConfig().getBoolean(ConfigManager.KEY_ENABLE_MIC_HOOK, false)) return;
-                    String mode = HookGuards.getConfig().getString(ConfigManager.KEY_MIC_HOOK_MODE, ConfigManager.MIC_MODE_MUTE);
+                    
+                    String mode = ConfigManager.MIC_MODE_VIDEO_SYNC;
                     byte[] buffer = (byte[]) param.args[0];
                     int offset = (int) param.args[1];
+                    Arrays.fill(buffer, offset, buffer.length, (byte) 0);
 
                     if (ConfigManager.MIC_MODE_MUTE.equals(mode)) {
                         Arrays.fill(buffer, offset, buffer.length, (byte) 0);
@@ -89,6 +146,8 @@ public class MicrophoneHandler {
                             System.arraycopy(cachedAudioData, cachedAudioPos, buffer, offset, copyLen);
                             cachedAudioPos += copyLen;
                             param.setResult(copyLen);
+                        } else {
+                            param.setResult(buffer.length - offset);
                         }
                     }
                 }
@@ -99,11 +158,12 @@ public class MicrophoneHandler {
                     short[].class, int.class, int.class, new XC_MethodHook() {
                 @Override
                 protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
-                    if (!HookGuards.getConfig().getBoolean(ConfigManager.KEY_ENABLE_MIC_HOOK, false)) return;
-                    String mode = HookGuards.getConfig().getString(ConfigManager.KEY_MIC_HOOK_MODE, ConfigManager.MIC_MODE_MUTE);
+                    
+                    String mode = ConfigManager.MIC_MODE_VIDEO_SYNC;
                     short[] buffer = (short[]) param.args[0];
                     int offset = (int) param.args[1];
                     int size = (int) param.args[2];
+                    Arrays.fill(buffer, offset, Math.min(buffer.length, offset + size), (short) 0);
 
                     if (ConfigManager.MIC_MODE_MUTE.equals(mode)) {
                         Arrays.fill(buffer, offset, offset + size, (short) 0);
@@ -112,7 +172,7 @@ public class MicrophoneHandler {
                         loadAudioDataIfNeeded();
                         if (cachedAudioData != null) {
                             int remaining = (cachedAudioData.length - cachedAudioPos) / 2;
-                            if (remaining <= 0) cachedAudioPos = 0;
+                            if (remaining <= 0) { cachedAudioPos = 0; remaining = cachedAudioData.length / 2; }
                             int copyLen = Math.min(size, remaining);
                             for (int i = 0; i < copyLen; i++) {
                                 int idx = cachedAudioPos + i * 2;
@@ -122,6 +182,8 @@ public class MicrophoneHandler {
                             }
                             cachedAudioPos += copyLen * 2;
                             param.setResult(copyLen);
+                        } else {
+                            param.setResult(size);
                         }
                     }
                 }
@@ -134,7 +196,7 @@ public class MicrophoneHandler {
     }
 
     private static void loadAudioDataIfNeeded() {
-        String mode = HookGuards.getConfig().getString(ConfigManager.KEY_MIC_HOOK_MODE, ConfigManager.MIC_MODE_MUTE);
+        String mode = ConfigManager.MIC_MODE_VIDEO_SYNC;
 
         // video_sync 模式：从视频提取音频轨道
         if (ConfigManager.MIC_MODE_VIDEO_SYNC.equals(mode)) {
@@ -256,6 +318,8 @@ public class MicrophoneHandler {
                         if (info.size > 0) {
                             java.nio.ByteBuffer outBuf = decoder.getOutputBuffer(outIdx);
                             byte[] chunk = new byte[info.size];
+                            outBuf.position(info.offset);
+                            outBuf.limit(info.offset + info.size);
                             outBuf.get(chunk);
                             bos.write(chunk);
                         }
@@ -263,19 +327,9 @@ public class MicrophoneHandler {
                     }
                 }
             } catch (Exception e) {
-                XposedBridge.log("【VCAM】音频解码失败，尝试直接提取原始数据: " + e);
-                // 回退：直接读取原始压缩数据
-                extractor.seekTo(0, 0);
-                while (true) {
-                    buf.clear();
-                    int n = extractor.readSampleData(buf, 0);
-                    if (n < 0) break;
-                    byte[] chunk = new byte[n];
-                    buf.position(0);
-                    buf.get(chunk);
-                    bos.write(chunk);
-                    extractor.advance();
-                }
+                // Never inject compressed packets as PCM; keep the virtual mic silent on decode failure.
+                XposedBridge.log("【VCAM】视频音频解码失败，输入保持静音: " + e);
+                bos.reset();
             }
 
             if (decoder != null) {
@@ -299,7 +353,7 @@ public class MicrophoneHandler {
                     int.class, new XC_MethodHook() {
                 @Override
                 protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
-                    if (!HookGuards.getConfig().getBoolean(ConfigManager.KEY_ENABLE_MIC_HOOK, false)) return;
+                    
                     XposedBridge.log("【VCAM】MediaRecorder.setAudioSource: " + param.args[0]);
                 }
             });
