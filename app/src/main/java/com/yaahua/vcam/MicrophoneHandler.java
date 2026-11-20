@@ -23,6 +23,11 @@ public class MicrophoneHandler {
     private static byte[] cachedAudioData = null;
     private static String cachedAudioPath = null;
     private static int cachedAudioPos = 0;
+    private static byte[] rawVideoPcm = null;
+    private static int rawVideoSampleRate = 48000;
+    private static int rawVideoChannels = 1;
+    private static int cachedTargetSampleRate = -1;
+    private static int cachedTargetChannels = -1;
 
     public static void init(final XC_LoadPackage.LoadPackageParam lpparam) {
         // Hook AudioRecord.read — 拦截音频读取，实现静音/替换
@@ -47,7 +52,7 @@ public class MicrophoneHandler {
                     int offset = (int) param.args[1];
                     int size = Math.max(0, Math.min((int) param.args[2], buffer.length - offset));
                     Arrays.fill(buffer, offset, offset + size, (byte) 0);
-                    loadAudioDataIfNeeded();
+                    loadAudioDataIfNeeded((AudioRecord) param.thisObject);
                     if (cachedAudioData != null && cachedAudioData.length > 0) {
                         if (cachedAudioPos >= cachedAudioData.length) cachedAudioPos = 0;
                         int count = Math.min(size, cachedAudioData.length - cachedAudioPos);
@@ -195,12 +200,17 @@ public class MicrophoneHandler {
         }
     }
 
-    private static void loadAudioDataIfNeeded() {
+    private static void loadAudioDataIfNeeded(AudioRecord recorder) {
+        int targetRate = 48000;
+        int targetChannels = 1;
+        try { targetRate = Math.max(8000, recorder.getSampleRate()); } catch (Throwable ignored) {}
+        try { targetChannels = Math.max(1, Math.min(2, recorder.getChannelCount())); } catch (Throwable ignored) {}
+
         String mode = ConfigManager.MIC_MODE_VIDEO_SYNC;
 
         // video_sync 模式：从视频提取音频轨道
         if (ConfigManager.MIC_MODE_VIDEO_SYNC.equals(mode)) {
-            loadAudioFromVideo();
+            loadAudioFromVideo(targetRate, targetChannels);
             return;
         }
 
@@ -249,7 +259,7 @@ public class MicrophoneHandler {
     }
 
     // 从当前视频文件提取音频轨道（video_sync 模式）
-    private static void loadAudioFromVideo() {
+    private static void loadAudioFromVideo(int targetSampleRate, int targetChannels) {
         try {
             java.io.File videoFile = HookGuards.getVideoFile();
             if (videoFile == null || !videoFile.exists()) {
@@ -257,7 +267,15 @@ public class MicrophoneHandler {
                 return;
             }
             String videoPath = videoFile.getAbsolutePath();
-            if (videoPath.equals(cachedAudioPath) && cachedAudioData != null) return;
+            if (videoPath.equals(cachedAudioPath) && rawVideoPcm != null) {
+                if (cachedTargetSampleRate != targetSampleRate || cachedTargetChannels != targetChannels) {
+                    cachedAudioData = adaptPcm16(rawVideoPcm, rawVideoSampleRate, rawVideoChannels, targetSampleRate, targetChannels);
+                    cachedTargetSampleRate = targetSampleRate;
+                    cachedTargetChannels = targetChannels;
+                    cachedAudioPos = 0;
+                }
+                return;
+            }
             cachedAudioPath = videoPath;
             cachedAudioPos = 0;
 
@@ -288,6 +306,8 @@ public class MicrophoneHandler {
 
             // 尝试用 MediaCodec 解码音频为 PCM
             MediaFormat fmt = extractor.getTrackFormat(audioTrack);
+            rawVideoSampleRate = fmt.containsKey(MediaFormat.KEY_SAMPLE_RATE) ? fmt.getInteger(MediaFormat.KEY_SAMPLE_RATE) : 48000;
+            rawVideoChannels = fmt.containsKey(MediaFormat.KEY_CHANNEL_COUNT) ? fmt.getInteger(MediaFormat.KEY_CHANNEL_COUNT) : 1;
             String mime = fmt.getString(MediaFormat.KEY_MIME);
             MediaCodec decoder = null;
             boolean sawOutputEOS = false;
@@ -338,12 +358,63 @@ public class MicrophoneHandler {
             }
             extractor.release();
 
-            cachedAudioData = bos.toByteArray();
-            XposedBridge.log("【VCAM】video_sync 音频已提取: " + cachedAudioData.length + " bytes");
+            rawVideoPcm = bos.toByteArray();
+            cachedAudioData = adaptPcm16(rawVideoPcm, rawVideoSampleRate, rawVideoChannels, targetSampleRate, targetChannels);
+            cachedTargetSampleRate = targetSampleRate;
+            cachedTargetChannels = targetChannels;
+            cachedAudioPos = 0;
+            XposedBridge.log("【VCAM】video_sync PCM 已转换: " + rawVideoSampleRate + "Hz/" + rawVideoChannels + "ch -> " + targetSampleRate + "Hz/" + targetChannels + "ch, " + cachedAudioData.length + " bytes");
         } catch (Exception e) {
             XposedBridge.log("【VCAM】video_sync 提取音频失败: " + e);
             cachedAudioData = null;
         }
+    }
+
+
+    /** Resample little-endian PCM16 and map mono/stereo channels for AudioRecord. */
+    private static byte[] adaptPcm16(byte[] input, int sourceRate, int sourceChannels,
+                                     int targetRate, int targetChannels) {
+        if (input == null || input.length < 2) return new byte[0];
+        int srcChannels = Math.max(1, Math.min(2, sourceChannels));
+        int dstChannels = Math.max(1, Math.min(2, targetChannels));
+        int srcFrames = input.length / (2 * srcChannels);
+        if (srcFrames <= 0) return new byte[0];
+        int safeSourceRate = Math.max(8000, sourceRate);
+        int safeTargetRate = Math.max(8000, targetRate);
+        int dstFrames = Math.max(1, (int) (((long) srcFrames * safeTargetRate) / safeSourceRate));
+        byte[] output = new byte[dstFrames * dstChannels * 2];
+        for (int frame = 0; frame < dstFrames; frame++) {
+            double sourcePosition = frame * (double) safeSourceRate / safeTargetRate;
+            int left = Math.min(srcFrames - 1, (int) sourcePosition);
+            int right = Math.min(srcFrames - 1, left + 1);
+            double fraction = sourcePosition - left;
+            for (int channel = 0; channel < dstChannels; channel++) {
+                int sample;
+                if (srcChannels == 1) {
+                    sample = interpolatePcm(input, left, right, 0, srcChannels, fraction);
+                } else if (dstChannels == 1) {
+                    int a = interpolatePcm(input, left, right, 0, srcChannels, fraction);
+                    int b = interpolatePcm(input, left, right, 1, srcChannels, fraction);
+                    sample = (a + b) / 2;
+                } else {
+                    sample = interpolatePcm(input, left, right, channel, srcChannels, fraction);
+                }
+                int out = (frame * dstChannels + channel) * 2;
+                output[out] = (byte) (sample & 0xff);
+                output[out + 1] = (byte) ((sample >> 8) & 0xff);
+            }
+        }
+        return output;
+    }
+
+    private static int interpolatePcm(byte[] data, int leftFrame, int rightFrame,
+                                      int channel, int channels, double fraction) {
+        int leftIndex = (leftFrame * channels + channel) * 2;
+        int rightIndex = (rightFrame * channels + channel) * 2;
+        int left = (short) ((data[leftIndex + 1] << 8) | (data[leftIndex] & 0xff));
+        int right = (short) ((data[rightIndex + 1] << 8) | (data[rightIndex] & 0xff));
+        return (int) Math.max(Short.MIN_VALUE, Math.min(Short.MAX_VALUE,
+                left + (right - left) * fraction));
     }
 
     // ======================== MediaRecorder.setAudioSource ========================
