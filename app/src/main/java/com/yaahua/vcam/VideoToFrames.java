@@ -226,6 +226,11 @@ public class VideoToFrames implements Runnable {
                     }
                     if (play_surf == null) {
                         Image image = decoder.getOutputImage(outputBufferId);
+                        if (image != null) {
+                            Rect frameCrop = image.getCropRect();
+                            SharedState.decodedVideoWidth = frameCrop.width();
+                            SharedState.decodedVideoHeight = frameCrop.height();
+                        }
                         ByteBuffer buffer = image.getPlanes()[0].getBuffer();
                         byte[] arr = new byte[buffer.remaining()];
                         buffer.get(arr);
