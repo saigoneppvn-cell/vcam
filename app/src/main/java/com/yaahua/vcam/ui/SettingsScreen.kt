@@ -134,6 +134,35 @@ fun SettingsScreen(viewModel: MainViewModel) {
             )
         }
 
+        SettingsSection(title = "Điều chỉnh hình ảnh video") {
+            Text("Xoay video", style = MaterialTheme.typography.bodyLarge)
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                listOf(0, 90, 180, 270).forEach { angle ->
+                    FilterChip(
+                        selected = uiState.videoRotationOffset == angle,
+                        onClick = { viewModel.setVideoRotationOffset(angle) },
+                        label = { Text("${angle}°") }
+                    )
+                }
+            }
+            Spacer(modifier = Modifier.height(8.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("Thu phóng / cắt khung", style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+                Text("${uiState.videoZoomPercent}%", style = MaterialTheme.typography.labelLarge)
+            }
+            Slider(
+                value = uiState.videoZoomPercent.toFloat(),
+                onValueChange = { viewModel.setVideoZoomPercent(it.toInt()) },
+                valueRange = 100f..400f,
+                steps = 29
+            )
+            Text(
+                "100% giữ trọn khung hình; tăng thu phóng sẽ cắt viền ở giữa.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+
         // Stream Settings
         SettingsSection(title = stringResource(R.string.settings_category_stream)) {
             val isStreamMode = uiState.mediaSourceType == ConfigManager.MEDIA_SOURCE_STREAM
