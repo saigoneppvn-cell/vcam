@@ -185,6 +185,8 @@ public class VideoToFrames implements Runnable {
         decoder.start();
         final int width = mediaFormat.getInteger(MediaFormat.KEY_WIDTH);
         final int height = mediaFormat.getInteger(MediaFormat.KEY_HEIGHT);
+        SharedState.decodedVideoWidth = width;
+        SharedState.decodedVideoHeight = height;
         int outputFrameCount = 0;
         while (!sawOutputEOS && !stopDecode) {
             while (paused && !stopDecode) {
