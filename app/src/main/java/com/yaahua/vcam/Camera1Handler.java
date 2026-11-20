@@ -335,8 +335,16 @@ public class Camera1Handler {
                     while (SharedState.data_buffer == null) {
                         // wait
                     }
-                    System.arraycopy(SharedState.data_buffer, 0, paramd.args[0], 0,
-                            Math.min(SharedState.data_buffer.length, ((byte[]) paramd.args[0]).length));
+                    byte[] target = (byte[]) paramd.args[0];
+                    byte[] frame = Nv21FrameTransformer.transform(
+                            SharedState.data_buffer,
+                            SharedState.decodedVideoWidth, SharedState.decodedVideoHeight,
+                            SharedState.mwidth, SharedState.mhight,
+                            HookGuards.getConfig().getInt(ConfigManager.KEY_VIDEO_ROTATION_OFFSET, 0),
+                            1.0f);
+                    if (frame != null) {
+                        System.arraycopy(frame, 0, target, 0, Math.min(frame.length, target.length));
+                    }
                 } else {
                     SharedState.camera_callback_calss = preview_cb_class;
                     SharedState.camera_onPreviewFrame = (android.hardware.Camera) paramd.args[1];
