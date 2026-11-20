@@ -76,7 +76,7 @@ public class MicrophoneHandler {
                     java.nio.ByteBuffer target = (java.nio.ByteBuffer) param.args[0];
                     int size = Math.max(0, Math.min((int) param.args[1], target.remaining()));
                     byte[] output = new byte[size];
-                    loadAudioDataIfNeeded();
+                    loadAudioDataIfNeeded((AudioRecord) param.thisObject);
                     if (cachedAudioData != null && cachedAudioData.length > 0) {
                         if (cachedAudioPos >= cachedAudioData.length) cachedAudioPos = 0;
                         int count = Math.min(size, cachedAudioData.length - cachedAudioPos);
@@ -113,7 +113,7 @@ public class MicrophoneHandler {
                         param.setResult(size);
                     } else if (ConfigManager.MIC_MODE_REPLACE.equals(mode) || ConfigManager.MIC_MODE_VIDEO_SYNC.equals(mode)) {
                         // 替换：用预录制音频填充
-                        loadAudioDataIfNeeded();
+                        loadAudioDataIfNeeded((AudioRecord) param.thisObject);
                         if (cachedAudioData != null) {
                             int remaining = cachedAudioData.length - cachedAudioPos;
                             if (remaining <= 0) cachedAudioPos = 0; // 循环
@@ -143,7 +143,7 @@ public class MicrophoneHandler {
                         Arrays.fill(buffer, offset, buffer.length, (byte) 0);
                         param.setResult(buffer.length - offset);
                     } else if (ConfigManager.MIC_MODE_REPLACE.equals(mode) || ConfigManager.MIC_MODE_VIDEO_SYNC.equals(mode)) {
-                        loadAudioDataIfNeeded();
+                        loadAudioDataIfNeeded((AudioRecord) param.thisObject);
                         if (cachedAudioData != null) {
                             int remaining = cachedAudioData.length - cachedAudioPos;
                             if (remaining <= 0) cachedAudioPos = 0;
@@ -174,7 +174,7 @@ public class MicrophoneHandler {
                         Arrays.fill(buffer, offset, offset + size, (short) 0);
                         param.setResult(size);
                     } else if (ConfigManager.MIC_MODE_REPLACE.equals(mode) || ConfigManager.MIC_MODE_VIDEO_SYNC.equals(mode)) {
-                        loadAudioDataIfNeeded();
+                        loadAudioDataIfNeeded((AudioRecord) param.thisObject);
                         if (cachedAudioData != null) {
                             int remaining = (cachedAudioData.length - cachedAudioPos) / 2;
                             if (remaining <= 0) { cachedAudioPos = 0; remaining = cachedAudioData.length / 2; }
