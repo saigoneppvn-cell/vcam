@@ -318,6 +318,8 @@ public class MicrophoneHandler {
                         if (info.size > 0) {
                             java.nio.ByteBuffer outBuf = decoder.getOutputBuffer(outIdx);
                             byte[] chunk = new byte[info.size];
+                            outBuf.position(info.offset);
+                            outBuf.limit(info.offset + info.size);
                             outBuf.get(chunk);
                             bos.write(chunk);
                         }
