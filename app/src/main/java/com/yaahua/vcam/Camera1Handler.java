@@ -341,7 +341,7 @@ public class Camera1Handler {
                             SharedState.decodedVideoWidth, SharedState.decodedVideoHeight,
                             SharedState.mwidth, SharedState.mhight,
                             HookGuards.getConfig().getInt(ConfigManager.KEY_VIDEO_ROTATION_OFFSET, 0),
-                            1.0f);
+                            HookGuards.getConfig().getInt(ConfigManager.KEY_VIDEO_ZOOM_PERCENT, 100) / 100.0f);
                     if (frame != null) {
                         System.arraycopy(frame, 0, target, 0, Math.min(frame.length, target.length));
                     }
@@ -380,7 +380,7 @@ public class Camera1Handler {
                             SharedState.decodedVideoWidth, SharedState.decodedVideoHeight,
                             SharedState.mwidth, SharedState.mhight,
                             HookGuards.getConfig().getInt(ConfigManager.KEY_VIDEO_ROTATION_OFFSET, 0),
-                            1.0f);
+                            HookGuards.getConfig().getInt(ConfigManager.KEY_VIDEO_ZOOM_PERCENT, 100) / 100.0f);
                     if (firstFrame != null) {
                         System.arraycopy(firstFrame, 0, firstTarget, 0, Math.min(firstFrame.length, firstTarget.length));
                     }
