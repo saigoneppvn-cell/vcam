@@ -183,6 +183,16 @@ public class VideoToFrames implements Runnable {
         boolean sawInputEOS = false;
         boolean sawOutputEOS = false;
         decoder.start();
+        if (play_surf != null) {
+            try {
+                int zoomPercent = HookGuards.getConfig().getInt(ConfigManager.KEY_VIDEO_ZOOM_PERCENT, 100);
+                decoder.setVideoScalingMode(zoomPercent > 100
+                        ? MediaCodec.VIDEO_SCALING_MODE_SCALE_TO_FIT_WITH_CROPPING
+                        : MediaCodec.VIDEO_SCALING_MODE_SCALE_TO_FIT);
+            } catch (Throwable scalingError) {
+                XposedBridge.log("【VCAM】Camera2 视频缩放模式设置失败: " + scalingError);
+            }
+        }
         final int width = mediaFormat.getInteger(MediaFormat.KEY_WIDTH);
         final int height = mediaFormat.getInteger(MediaFormat.KEY_HEIGHT);
         SharedState.decodedVideoWidth = width;
