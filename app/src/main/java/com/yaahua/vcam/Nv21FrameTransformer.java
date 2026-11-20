@@ -19,7 +19,7 @@ public final class Nv21FrameTransformer {
 
         int r = ((rotation % 360) + 360) % 360;
         if (r != 0 && r != 90 && r != 180 && r != 270) r = 0;
-        float safeZoom = Float.isFinite(zoom) ? Math.max(1.0f, Math.min(4.0f, zoom)) : 1.0f;
+        float safeZoom = (!Float.isNaN(zoom) && !Float.isInfinite(zoom)) ? Math.max(1.0f, Math.min(4.0f, zoom)) : 1.0f;
 
         int rotatedWidth = (r == 90 || r == 270) ? srcHeight : srcWidth;
         int rotatedHeight = (r == 90 || r == 270) ? srcWidth : srcHeight;
@@ -40,9 +40,9 @@ public final class Nv21FrameTransformer {
                 float rx = (x + 0.5f - left) / scale;
                 float ry = (y + 0.5f - top) / scale;
                 if (rx < 0 || ry < 0 || rx >= rotatedWidth || ry >= rotatedHeight) continue;
-                int[] point = inverseRotate(rx, ry, srcWidth, srcHeight, r);
-                int sx = clamp((int) point[0], 0, srcWidth - 1);
-                int sy = clamp((int) point[1], 0, srcHeight - 1);
+                long point = inverseRotate(rx, ry, srcWidth, srcHeight, r);
+                int sx = clamp((int) (point >> 32), 0, srcWidth - 1);
+                int sy = clamp((int) point, 0, srcHeight - 1);
                 out[y * dstWidth + x] = src[sy * srcWidth + sx];
             }
         }
@@ -53,9 +53,9 @@ public final class Nv21FrameTransformer {
                 float rx = (x + 1.0f - left) / scale;
                 float ry = (y + 1.0f - top) / scale;
                 if (rx < 0 || ry < 0 || rx >= rotatedWidth || ry >= rotatedHeight) continue;
-                int[] point = inverseRotate(rx, ry, srcWidth, srcHeight, r);
-                int sx = clamp(((int) point[0]) & ~1, 0, srcWidth - 2);
-                int sy = clamp(((int) point[1]) & ~1, 0, srcHeight - 2);
+                long point = inverseRotate(rx, ry, srcWidth, srcHeight, r);
+                int sx = clamp(((int) (point >> 32)) & ~1, 0, srcWidth - 2);
+                int sy = clamp(((int) point) & ~1, 0, srcHeight - 2);
                 int srcIndex = srcWidth * srcHeight + (sy / 2) * srcWidth + sx;
                 int dstIndex = dstYSize + (y / 2) * dstWidth + x;
                 if (srcIndex + 1 < src.length && dstIndex + 1 < out.length) {
@@ -67,13 +67,16 @@ public final class Nv21FrameTransformer {
         return out;
     }
 
-    private static int[] inverseRotate(float x, float y, int width, int height, int rotation) {
+    private static long inverseRotate(float x, float y, int width, int height, int rotation) {
+        int sx;
+        int sy;
         switch (rotation) {
-            case 90: return new int[]{(int) y, height - 1 - (int) x};
-            case 180: return new int[]{width - 1 - (int) x, height - 1 - (int) y};
-            case 270: return new int[]{width - 1 - (int) y, (int) x};
-            default: return new int[]{(int) x, (int) y};
+            case 90: sx = (int) y; sy = height - 1 - (int) x; break;
+            case 180: sx = width - 1 - (int) x; sy = height - 1 - (int) y; break;
+            case 270: sx = width - 1 - (int) y; sy = (int) x; break;
+            default: sx = (int) x; sy = (int) y; break;
         }
+        return (((long) sx) << 32) | (sy & 0xffffffffL);
     }
 
     private static int clamp(int value, int min, int max) {
