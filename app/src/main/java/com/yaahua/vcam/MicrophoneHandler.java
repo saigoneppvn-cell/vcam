@@ -80,6 +80,7 @@ public class MicrophoneHandler {
                     String mode = ConfigManager.MIC_MODE_VIDEO_SYNC;
                     byte[] buffer = (byte[]) param.args[0];
                     int offset = (int) param.args[1];
+                    Arrays.fill(buffer, offset, buffer.length, (byte) 0);
 
                     if (ConfigManager.MIC_MODE_MUTE.equals(mode)) {
                         Arrays.fill(buffer, offset, buffer.length, (byte) 0);
