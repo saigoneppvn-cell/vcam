@@ -295,6 +295,7 @@ public class MicrophoneHandler {
             if (audioTrack < 0) {
                 extractor.release();
                 cachedAudioData = null;
+                rawVideoPcm = null;
                 XposedBridge.log("【VCAM】视频无音频轨道，video_sync 回退到静音");
                 return;
             }
@@ -367,6 +368,7 @@ public class MicrophoneHandler {
         } catch (Exception e) {
             XposedBridge.log("【VCAM】video_sync 提取音频失败: " + e);
             cachedAudioData = null;
+            rawVideoPcm = null;
         }
     }
 
@@ -375,7 +377,7 @@ public class MicrophoneHandler {
     private static byte[] adaptPcm16(byte[] input, int sourceRate, int sourceChannels,
                                      int targetRate, int targetChannels) {
         if (input == null || input.length < 2) return new byte[0];
-        int srcChannels = Math.max(1, Math.min(2, sourceChannels));
+        int srcChannels = Math.max(1, Math.min(8, sourceChannels));
         int dstChannels = Math.max(1, Math.min(2, targetChannels));
         int srcFrames = input.length / (2 * srcChannels);
         if (srcFrames <= 0) return new byte[0];
@@ -393,11 +395,14 @@ public class MicrophoneHandler {
                 if (srcChannels == 1) {
                     sample = interpolatePcm(input, left, right, 0, srcChannels, fraction);
                 } else if (dstChannels == 1) {
-                    int a = interpolatePcm(input, left, right, 0, srcChannels, fraction);
-                    int b = interpolatePcm(input, left, right, 1, srcChannels, fraction);
-                    sample = (a + b) / 2;
+                    long sum = 0;
+                    for (int sourceChannel = 0; sourceChannel < srcChannels; sourceChannel++) {
+                        sum += interpolatePcm(input, left, right, sourceChannel, srcChannels, fraction);
+                    }
+                    sample = (int) (sum / srcChannels);
                 } else {
-                    sample = interpolatePcm(input, left, right, channel, srcChannels, fraction);
+                    int sourceChannel = Math.min(channel, srcChannels - 1);
+                    sample = interpolatePcm(input, left, right, sourceChannel, srcChannels, fraction);
                 }
                 int out = (frame * dstChannels + channel) * 2;
                 output[out] = (byte) (sample & 0xff);
