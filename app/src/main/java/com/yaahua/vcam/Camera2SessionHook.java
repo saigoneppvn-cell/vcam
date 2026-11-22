@@ -159,7 +159,8 @@ public class Camera2SessionHook {
                             super.beforeHookedMethod(param);
                             if (param.args[1] != null) {
                                 SharedState.outputConfiguration = new OutputConfiguration(SharedState.c2_virtual_surface);
-                                param.args[0] = Arrays.asList(SharedState.outputConfiguration);
+                                // The output-configuration list is the second argument; args[0] is InputConfiguration.
+                                param.args[1] = Arrays.asList(SharedState.outputConfiguration);
                                 XposedBridge.log("【VCAM】执行了 createReprocessableCaptureSessionByConfigurations");
                                 if (param.args[2] != null) {
                                     processCamera2SessionCallback((CameraCaptureSession.StateCallback) param.args[2]);
