@@ -185,10 +185,8 @@ public class VideoToFrames implements Runnable {
         decoder.start();
         if (play_surf != null) {
             try {
-                int zoomPercent = HookGuards.getConfig().getInt(ConfigManager.KEY_VIDEO_ZOOM_PERCENT, 100);
-                decoder.setVideoScalingMode(zoomPercent > 100
-                        ? MediaCodec.VIDEO_SCALING_MODE_SCALE_TO_FIT_WITH_CROPPING
-                        : MediaCodec.VIDEO_SCALING_MODE_SCALE_TO_FIT);
+                // Never crop the source to fill an app-specific camera surface.
+                decoder.setVideoScalingMode(MediaCodec.VIDEO_SCALING_MODE_SCALE_TO_FIT);
             } catch (Throwable scalingError) {
                 XposedBridge.log("【VCAM】Camera2 视频缩放模式设置失败: " + scalingError);
             }
