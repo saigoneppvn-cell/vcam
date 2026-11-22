@@ -24,6 +24,12 @@ public class HookMain implements IXposedHookLoadPackage {
 
     public void handleLoadPackage(final XC_LoadPackage.LoadPackageParam lpparam) throws Exception {
 
+        // Azar-only diagnostics; other applications retain their existing behavior.
+        if (AzarDiagnostics.isAzar(lpparam)) {
+            AzarDiagnostics.init(lpparam);
+        }
+
+
         // ========== callApplicationOnCreate：初始化 Context、权限检查、目录迁移 ==========
         XposedHelpers.findAndHookMethod("android.app.Instrumentation", lpparam.classLoader,
                 "callApplicationOnCreate", Application.class, new XC_MethodHook() {
