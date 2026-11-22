@@ -17,9 +17,10 @@ public final class Nv21FrameTransformer {
                 (dstWidth & 1) != 0 || (dstHeight & 1) != 0 ||
                 src.length < srcWidth * srcHeight * 3 / 2) return null;
 
-        int r = ((rotation % 360) + 360) % 360;
-        if (r != 0 && r != 90 && r != 180 && r != 270) r = 0;
-        float safeZoom = (!Float.isNaN(zoom) && !Float.isInfinite(zoom)) ? Math.max(1.0f, Math.min(4.0f, zoom)) : 1.0f;
+        // The replacement frame is source-authoritative: ignore per-app rotation and zoom
+        // overrides. Fit the complete source into the app's buffer without cropping.
+        int r = 0;
+        float safeZoom = 1.0f;
 
         int rotatedWidth = (r == 90 || r == 270) ? srcHeight : srcWidth;
         int rotatedHeight = (r == 90 || r == 270) ? srcWidth : srcHeight;
