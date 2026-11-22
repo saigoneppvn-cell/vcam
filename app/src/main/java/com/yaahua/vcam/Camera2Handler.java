@@ -71,15 +71,21 @@ public class Camera2Handler {
         XposedHelpers.findAndHookMethod("android.hardware.camera2.CameraManager", lpparam.classLoader,
                 "openCamera", String.class, Executor.class, CameraDevice.StateCallback.class, new XC_MethodHook() {
             @Override
-            protected void afterHookedMethod(MethodHookParam param) throws Throwable {
+            protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
                 if (param.args[2] == null) return;
                 if (param.args[2].equals(SharedState.c2_state_cb)) return;
                 SharedState.c2_state_cb = (CameraDevice.StateCallback) param.args[2];
+                XposedBridge.log("【VCAM】【DIAG】openCamera(String, Executor, StateCallback) package="
+                        + lpparam.packageName + " callback=" + param.args[2].getClass().getName());
 
-                if (HookGuards.isDisabled()) return;
+                if (HookGuards.isDisabled()) {
+                    XposedBridge.log("【VCAM】【DIAG】Camera2 hook skipped: module disabled");
+                    return;
+                }
                 File file = HookGuards.getVideoFile();
                 SharedState.need_to_show_toast = HookGuards.shouldShowToast();
                 if (!file.exists()) {
+                    XposedBridge.log("【VCAM】【DIAG】Camera2 replacement video missing: " + file.getAbsolutePath());
                     if (SharedState.toast_content != null && SharedState.need_to_show_toast) {
                         try {
                             Toast.makeText(SharedState.toast_content,
@@ -92,7 +98,7 @@ public class Camera2Handler {
                     return;
                 }
                 SharedState.c2_state_callback = param.args[2].getClass();
-                XposedBridge.log("【VCAM】2位参数初始化相机，类：" + SharedState.c2_state_callback.toString());
+                XposedBridge.log("【VCAM】【DIAG】Camera2 callback hook install: " + SharedState.c2_state_callback.getName());
                 SharedState.is_first_hook_build = true;
                 Camera2SessionHook.processCamera2Init(SharedState.c2_state_callback);
             }
